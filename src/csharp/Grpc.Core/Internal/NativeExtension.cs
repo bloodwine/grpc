@@ -38,7 +38,7 @@ namespace Grpc.Core.Internal
         private NativeExtension()
         {
             this.nativeMethods = new NativeMethods(Load());
-            
+
             // Redirect the the native logs as the very first thing after loading the native extension
             // to make sure we don't lose any logs.
             NativeLogRedirector.Redirect(this.nativeMethods);
@@ -58,7 +58,8 @@ namespace Grpc.Core.Internal
             {
                 lock (staticLock)
                 {
-                    if (instance == null) {
+                    if (instance == null)
+                    {
                         instance = new NativeExtension();
                     }
                 }
@@ -81,23 +82,33 @@ namespace Grpc.Core.Internal
         {
             // TODO: allow customizing path to native extension (possibly through exposing a GrpcEnvironment property).
             // See https://github.com/grpc/grpc/pull/7303 for one option.
-            var assemblyDirectory = Path.GetDirectoryName(GetAssemblyPath());
 
-            // With old-style VS projects, the native libraries get copied using a .targets rule to the build output folder
-            // alongside the compiled assembly.
-            // With dotnet cli projects targeting net45 framework, the native libraries (just the required ones)
-            // are similarly copied to the built output folder, through the magic of Microsoft.NETCore.Platforms.
-            var classicPath = Path.Combine(assemblyDirectory, GetNativeLibraryFilename());
+            string[] paths;
+            string explicitPath = GrpcEnvironment.NativeLibrary;
+            if (explicitPath != null)
+            {
+                paths = new[] { explicitPath };
+            }
+            else
+            {
+                var assemblyDirectory = Path.GetDirectoryName(GetAssemblyPath());
 
-            // With dotnet cli project targeting netcoreapp1.0, projects will use Grpc.Core assembly directly in the location where it got restored
-            // by nuget. We locate the native libraries based on known structure of Grpc.Core nuget package.
-            // When "dotnet publish" is used, the runtimes directory is copied next to the published assemblies.
-            string runtimesDirectory = string.Format("runtimes/{0}/native", GetPlatformString());
-            var netCorePublishedAppStylePath = Path.Combine(assemblyDirectory, runtimesDirectory, GetNativeLibraryFilename());
-            var netCoreAppStylePath = Path.Combine(assemblyDirectory, "../..", runtimesDirectory, GetNativeLibraryFilename());
+                // With old-style VS projects, the native libraries get copied using a .targets rule to the build output folder
+                // alongside the compiled assembly.
+                // With dotnet cli projects targeting net45 framework, the native libraries (just the required ones)
+                // are similarly copied to the built output folder, through the magic of Microsoft.NETCore.Platforms.
+                var classicPath = Path.Combine(assemblyDirectory, GetNativeLibraryFilename());
 
-            // Look for all native library in all possible locations in given order.
-            string[] paths = new[] { classicPath, netCorePublishedAppStylePath, netCoreAppStylePath};
+                // With dotnet cli project targeting netcoreapp1.0, projects will use Grpc.Core assembly directly in the location where it got restored
+                // by nuget. We locate the native libraries based on known structure of Grpc.Core nuget package.
+                // When "dotnet publish" is used, the runtimes directory is copied next to the published assemblies.
+                string runtimesDirectory = string.Format("runtimes/{0}/native", GetPlatformString());
+                var netCorePublishedAppStylePath = Path.Combine(assemblyDirectory, runtimesDirectory, GetNativeLibraryFilename());
+                var netCoreAppStylePath = Path.Combine(assemblyDirectory, "../..", runtimesDirectory, GetNativeLibraryFilename());
+
+                // Look for all native library in all possible locations in given order.
+                paths = new[] { classicPath, netCorePublishedAppStylePath, netCoreAppStylePath };
+            }
             return new UnmanagedLibrary(paths);
         }
 
